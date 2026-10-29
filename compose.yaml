@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ledgerflow_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: ledgerflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ledgerflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ledgerflow_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+psycopg://postgres:postgrespassword@db:5432/ledgerflow
+      - APP_NAME=LedgerFlow
+      - ENV=production
+      - LOG_LEVEL=INFO
+      - CORS_ORIGINS=["*"]
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
